@@ -6,11 +6,12 @@
   "scripts": {
     "test": "grunt test"
   },
-  "repository": "",
+  "repository": "https://github.com/clintberry/phony.git",
   "keywords": [
     "telephony",
     "phone",
-    "freeswitch"
+    "freeswitch",
+    "communication"
   ],
   "author": "Clint Berry",
   "license": "MIT",
