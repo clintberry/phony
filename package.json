@@ -1,5 +1,5 @@
 {
-  "name": "phony",
+  "name": "phony-node",
   "version": "0.0.1",
   "description": "Telephony framework for FreeSWITCH",
   "main": "index.js",
