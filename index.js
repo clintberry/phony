@@ -12,7 +12,7 @@ function Connection(address, port, password) {
   this.conn = null;
   this.eventArray = [];
   this.dbType = 'sqlite'; // sqlite || postgresql
-  this.pendingFunctions = [];
+  this.functionQueue = [];
 }
 
 Connection.prototype.connect = function(cb) {
@@ -21,30 +21,39 @@ Connection.prototype.connect = function(cb) {
     cb(instance.conn);
     // If any event subscriptions exist, subscribe now
     if(instance.eventArray.length) {
+      console.log('Subscribing to events... ', instance.eventArray);
+      instance.conn.subscribe(instance.eventArray, function(){});
+    }
+    instance.eventArray.push = function(event) {
+      instance.eventArray.prototype.push(event);
       instance.conn.subscribe(instance.eventArray, function(){});
     }
     // If any pending functions exist, call them now
-    if(instance.pendingFunctions.length) {
-      instance.callPendingFunctions();
+    if(instance.functionQueue.length) {
+      instance.callfunctionQueue();
     }
     return instance.conn;
   });
-}
+};
 
 Connection.prototype.disconnect = function() {
   this.conn.disconnect();
-}
+};
 
 Connection.prototype.isConnected = function() {
   return !!this.conn && this.conn.connected();
-}
+};
 
-Connection.prototype.callPendingFunctions = function() {
-  while(this.pendingFunctions.length) {
-    var pendingObj = this.pendingFunctions.shift();
-    pendingObj.func(pendingObj.cb);
+Connection.prototype.callfunctionQueue = function() {
+  while(this.functionQueue.length) {
+    var pendingObj = this.functionQueue.shift();
+    pendingObj();
   }
-}
+  // Once we have all the functions executed, overwrite push function to just execute passed functions
+  this.functionQueue.push = function(callMe) {
+    callMe();
+  }
+};
 
 /*************************************************
   Events
@@ -61,12 +70,13 @@ Connection.prototype.subscribe = function(events, cb) {
     cb('First argument must be event name string, or array of event names');
     return false;
   }
-  if(this.isConnected()){
-    this.conn.subscribe(this.eventArray, function(){
-      cb(null);
-    });
-  }
-}
+  var instance = this;
+  // this.functionQueue.push(function(){
+  //   instance.conn.subscribe(instance.eventArray, function(){
+  //     cb(null);
+  //   });
+  // });
+};
 
 Connection.prototype.unsubscribe = function(events, cb) {
   if (typeof events == 'string' || events instanceof String) {
@@ -82,7 +92,7 @@ Connection.prototype.unsubscribe = function(events, cb) {
     return false;
   }
   // No unsubscribe in modesl library just yet. Need to submit a pull request
-}
+};
 
 /**
  * Event handler for freeswitch events
@@ -91,10 +101,16 @@ Connection.prototype.unsubscribe = function(events, cb) {
  * @return {Null}               Null
  */
 Connection.prototype.on = function(eventName, handler) {
-  this.conn.on('esl::event::' + eventName + '::**', function(e) {
-    handler(e);
+  var instance = this;
+  if(_.indexOf(instance.eventArray, eventName) == -1) {
+    instance.eventArray.push(eventName);
+  }
+  instance.functionQueue.push(function(){
+    instance.conn.on('esl::event::' + eventName + '::**', function(e) {
+      handler(e);
+    });
   });
-}
+};
 
 /**
  * Advand On event handler for direct access to node-esl event handler
@@ -103,8 +119,10 @@ Connection.prototype.on = function(eventName, handler) {
  * @return {Null} Null
  */
 Connection.prototype.advOn = function(eventName, handler) {
-  this.conn.on(eventName, function(e) {
-    handler(e);
+  instance.functionQueue.push(function(){
+    this.conn.on(eventName, function(e) {
+      handler(e);
+    });
   });
 }
 
@@ -119,15 +137,9 @@ Connection.prototype.getChannels = function(cb) {
       callback(err, data);
     });
   }
-  if(this.isConnected()) {
+  this.functionQueue.push(function(){
     getChannelsFunc(cb);
-  }
-  else {
-    this.pendingFunctions.push({
-      func: getChannelsFunc,
-      cb: cb
-    });
-  }
+  });
 }
 
 Connection.prototype.getCalls = function(cb) {
@@ -137,15 +149,9 @@ Connection.prototype.getCalls = function(cb) {
       callback(err, data);
     });
   }
-  if(this.isConnected()) {
+  this.functionQueue.push(function(){
     getCalls(cb);
-  }
-  else {
-    this.pendingFunctions.push({
-      func: getCalls,
-      cb: cb
-    });
-  }
+  });
 }
 
 /*************************************************
@@ -230,15 +236,9 @@ function sendApiRequest(instance, apiCommand, cb) {
       callback(res.getBody());
     });
   }
-  if(instance.isConnected()) {
+  instance.functionQueue.push(function(){
     tempFunction(cb);
-  }
-  else {
-    instance.pendingFunctions.push({
-      func: tempFunction,
-      cb: cb
-    });
-  }
+  });
 }
 
 
