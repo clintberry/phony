@@ -1,7 +1,10 @@
 
 var esl = require('modesl');
 var _ = require('lodash');
+_.str = require('underscore.string');
 var csv = require('csv');
+var logger = null;
+var sprintf = require('sprintf');
 
 
 function Connection(address, port, password) {
@@ -16,12 +19,14 @@ function Connection(address, port, password) {
 }
 
 Connection.prototype.connect = function(cb) {
+  log("HELLO!!!!")
   var instance = this;
   instance.conn = new esl.Connection(instance.address, instance.port, instance.password, function() {
+    log("CONNECTED!!!!!");
     cb(instance.conn);
     // If any event subscriptions exist, subscribe now
     if(instance.eventArray.length) {
-      console.log('Subscribing to events... ', instance.eventArray);
+      log('Subscribing to events... ', instance.eventArray);
       instance.conn.subscribe(instance.eventArray, function(){});
     }
     instance.eventArray.push = function(event) {
@@ -34,6 +39,15 @@ Connection.prototype.connect = function(cb) {
     }
     return instance.conn;
   });
+};
+
+
+Connection.prototype.setLogger = function(newLogger) {
+  logger = newLogger || {
+    log: function(level, message) {
+      console.log(level + ': ' + message);
+    }
+  };
 };
 
 Connection.prototype.disconnect = function() {
@@ -154,6 +168,52 @@ Connection.prototype.getCalls = function(cb) {
   });
 }
 
+
+Connection.prototype.callNumber = function(user, number, options, cb) {
+  var instance = this;
+  if(_.isFunction(options)) {
+    cb = options;
+    options = null;
+  }
+
+  var channelVars = '';
+
+  if(options && _.isObject(options)) {
+    if(_.has(options, 'channelVars')) {
+      channelVars = '[';
+      _.each(options.channelVars, function(val, key) {
+        channelVars = channelVars + key + "=" + val + ','; 
+      });
+      channelVars = channelVars.slice(0, -1) + ']';
+    }
+  }
+
+  var dialString = sprintf(channelVars + 'user/%(user)s %(number)s', { user: user, number: number});
+  log('debug', 'Dialstring: ' + dialString);
+
+  sendApiRequest(instance, 'originate', dialString, function(res) {
+    if(res.indexOf('+OK') !== 0) {
+      cb("Error creating call: " + res);
+    }
+    else {
+      var uuid = _.str.trim(res.slice(4));
+      cb(null, { uuid: uuid });
+    }
+  });
+}
+
+Connection.prototype.callHold = function(uuid, cb) {
+
+}
+
+Connection.prototype.callResume = function(uuid, cb) {
+
+}
+
+Connection.prototype.callEnd = function(uuid, cb) {
+
+}
+
 /*************************************************
   Sofia Commands
 **************************************************/
@@ -229,16 +289,30 @@ Connection.prototype.getUsers = function(profile, cb) {
   }
 }
 
-function sendApiRequest(instance, apiCommand, cb) {
+function sendApiRequest(instance, apiCommand, args, cb) {
+  if(_.isFunction(args)) {
+    cb = args;
+    args = null;
+  }
   var tempFunction = function(callback) {
-    instance.conn.bgapi(apiCommand, function(res) {
-      //console.log(res.getBody());
+    instance.conn.bgapi(apiCommand, args, function(res) {
+      //log(res.getBody());
       callback(res.getBody());
     });
   }
   instance.functionQueue.push(function(){
     tempFunction(cb);
   });
+}
+
+function log(level, message) {
+  if(logger) {
+    if(typeof message == 'undefined') {
+      message = level;
+      level = 'debug';
+    }
+    logger.log(level, message);
+  } 
 }
 
 
