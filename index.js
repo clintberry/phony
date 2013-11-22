@@ -203,7 +203,7 @@ Connection.prototype.callNumber = function(user, number, options, cb) {
 }
 
 Connection.prototype.callHold = function(uuid, cb) {
-
+  var esString = sprintf
 }
 
 Connection.prototype.callResume = function(uuid, cb) {
