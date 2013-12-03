@@ -19,14 +19,13 @@ function Connection(address, port, password) {
 }
 
 Connection.prototype.connect = function(cb) {
-  log("HELLO!!!!")
+  log('debug', 'Attempting to connect to FS event socket at ' + instance.address + ':' + instance.port)
   var instance = this;
   instance.conn = new esl.Connection(instance.address, instance.port, instance.password, function() {
-    log("CONNECTED!!!!!");
+    log('info', 'Connected to FS event socket at ' + instance.address + ':' + instance.port);
     cb(instance.conn);
     // If any event subscriptions exist, subscribe now
     if(instance.eventArray.length) {
-      log('Subscribing to events... ', instance.eventArray);
       instance.conn.subscribe(instance.eventArray, function(){});
     }
     instance.eventArray.push = function(event) {
@@ -203,15 +202,39 @@ Connection.prototype.callNumber = function(user, number, options, cb) {
 }
 
 Connection.prototype.callHold = function(uuid, cb) {
-  var esString = sprintf
+  var instance = this;
+  sendApiRequest(instance, 'uuid_phone_event', uuid + " hold", function(res) {
+    if(res.indexOf('+OK') !== 0) {
+      cb("Error holding call: " + res);
+    }
+    else {
+      cb(null, { res: res });
+    }
+  });
 }
 
 Connection.prototype.callResume = function(uuid, cb) {
-
+  var instance = this;
+  sendApiRequest(instance, 'uuid_phone_event', uuid + " talk", function(res) {
+    if(res.indexOf('+OK') !== 0) {
+      cb("Error resuming call: " + res);
+    }
+    else {
+      cb(null, { res: res });
+    }
+  });
 }
 
 Connection.prototype.callEnd = function(uuid, cb) {
-
+  var instance = this;
+  sendApiRequest(instance, 'uuid_kill', uuid, function(res) {
+    if(res.indexOf('+OK') !== 0) {
+      cb("Error ending call: " + res);
+    }
+    else {
+      cb(null, { res: res });
+    }
+  });
 }
 
 /*************************************************
