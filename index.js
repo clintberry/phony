@@ -19,8 +19,8 @@ function Connection(address, port, password) {
 }
 
 Connection.prototype.connect = function(cb) {
-  log('debug', 'Attempting to connect to FS event socket at ' + instance.address + ':' + instance.port)
   var instance = this;
+  log('debug', 'Attempting to connect to FS event socket at ' + instance.address + ':' + instance.port)
   instance.conn = new esl.Connection(instance.address, instance.port, instance.password, function() {
     log('info', 'Connected to FS event socket at ' + instance.address + ':' + instance.port);
     cb(instance.conn);
