@@ -1,4 +1,4 @@
-# Phony
+# Phony [![Build Status](https://travis-ci.org/clintberry/phony.png?branch=master)](https://travis-ci.org/clintberry/phony)
 
 JavaScript telephony framework.
 
