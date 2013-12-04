@@ -1,6 +1,6 @@
 'use strict';
 
-var manager = require('../lib/phony.js');
+var phony = require('../lib/phony.js');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -22,7 +22,7 @@ var manager = require('../lib/phony.js');
     test.ifError(value)
 */
 
-exports['manager'] = {
+exports.phony = {
   setUp: function(done) {
     // setup here
     done();
@@ -30,8 +30,8 @@ exports['manager'] = {
   'no args': function(test) {
     test.expect(1);
     // tests here
-    manager.awesome = 'awesome';
-    test.equal(manager.awesome, 'awesome', 'should be awesome.');
+    phony.awesome = 'awesome';
+    test.equal(phony.awesome, 'awesome', 'should be awesome.');
     test.done();
   }
 };
