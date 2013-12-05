@@ -1,6 +1,6 @@
 {
   "name": "phony-node",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Telephony framework for FreeSWITCH",
   "main": "lib/phony.js",
   "scripts": {
